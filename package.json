@@ -1,0 +1,14 @@
+{
+  "name": "threshold-tuner",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "data:seed42": "node ./scripts/make-sample-data.js --seed 42 --count 1200 --out ./data/alerts-seed-42.json",
+    "data:seed7": "node ./scripts/make-sample-data.js --seed 7 --count 1200 --out ./data/alerts-seed-7.json",
+    "calibrate:sample": "node cli.js --input ./data/alerts-seed-42.json --target standard --out ./outputs/report-standard.json",
+    "backtest:sample": "node cli.js --input ./data/alerts-seed-42.json --target standard --scenario ./scenarios/sample-scenarios.json --out ./outputs/report-standard.json",
+    "backtest:fun": "node cli.js --input ./data/alerts-seed-42.json --target standard --scenario ./scenarios/fun-what-if.json --out ./outputs/report-fun.json",
+    "backtest:drift": "node cli.js --input ./data/alerts-seed-42.json --prior ./data/alerts-seed-7.json --target standard --scenario ./scenarios/sample-scenarios.json --out ./outputs/report-standard.json"
+  }
+}

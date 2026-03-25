@@ -1,136 +1,87 @@
 # threshold-tuner
 
-> Analyses alert-to-SAR conversion rates per rule and recommends data-driven threshold adjustments for transaction monitoring engines.
+Analyses alert-to-SAR conversion rates and recommends explainable threshold actions for transaction monitoring rule engines.
 
-[![JavaScript](https://img.shields.io/badge/JavaScript-ES2022-F7DF1E?logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
-[![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A518-339933?logo=node.js&logoColor=white)](https://nodejs.org)
-[![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
+## Evidence Labels
 
----
+- `Synthetic-benchmark`: benchmark outputs generated from synthetic datasets.
+- `Measured` (optional future use): qualified deployment context metrics with evidence.
 
-## What It Does
+## Decision Model Encoded Here
 
-`threshold-tuner` takes historical alert data as input and outputs calibration recommendations per monitoring rule. It answers the question compliance teams face every quarter: *"Which thresholds are generating noise, and how much can we safely raise them without missing true positives?"*
+This project codifies practical calibration judgment used in real TM operations:
 
-It does this by:
-- Grouping alerts by `rule_id` and computing per-rule SAR conversion rates
-- Identifying score separation between SAR-filed and non-SAR alerts
-- Recommending a specific threshold raise (or flagging overlapping score distributions for rule-logic review) based on a configurable conversion target
-- Estimating the alert volume reduction from each recommended change
+- detect low-signal rules by conversion and score behavior
+- separate threshold issues from rule-logic issues
+- score confidence before suggesting action
+- highlight operational risk of each recommendation
+- simulate scenario tradeoffs before rollout
 
----
+## Proof Chain
 
-## Why It Exists
-
-Threshold calibration in most VASPs is done manually -- an analyst pulls a sample of alerts, calculates conversion rates in a spreadsheet, and makes a judgment call. This is slow, inconsistent, and hard to audit.
-
-This module formalises that process into a repeatable, documented pipeline. It was extracted from the broader [RuleForge](https://github.com/garbis-darie/ruleforge) compliance methodology as a standalone reference implementation.
-
----
-
-## Core API (`lib/tuner.js`)
-
-| Function | Purpose |
-|---|---|
-| `analyseByRule(alerts)` | Groups alerts by `rule_id`, computes conversion rate, avg score, score distribution |
-| `recommend(analysis, options)` | Generates threshold adjustment recommendations with rationale and confidence |
-| `generateReport(alerts, options)` | End-to-end: runs analysis + recommendations + summary in one call |
-
----
+- Claim: calibration decisions can be made more consistent, auditable, and explainable.
+- Method: rule-level conversion analysis, score-overlap checks, confidence scoring, scenario backtesting.
+- Dataset: synthetic benchmark datasets with fixed seeds.
+- Result: recommendation report + CSV + markdown summary + optional drift diagnostics.
+- Limitations: benchmark proxies are directional and not legal or regulatory determinations.
+- Reproducibility: run CLI with provided seed datasets and sample scenarios.
 
 ## Quick Start
 
-```js
-import { generateReport, SAMPLE_ALERTS } from './lib/tuner.js';
-
-// Run against mock data
-const report = generateReport(SAMPLE_ALERTS, { target: 'standard' });
-
-console.log(report.summary);
-// {
-//   total_alerts: 19,
-//   total_sars: 8,
-//   overall_conversion_pct: 42.1,
-//   rules_analysed: 7,
-//   rules_flagged_for_raise: 4,
-//   estimated_volume_reduction: -8,
-//   generated_at: '...'
-// }
-
-console.log(report.recommendations);
-// [
-//   { rule_id: 'D-3', action: 'raise_threshold', suggested_threshold: 64, confidence: 'high', ... },
-//   { rule_id: 'D-4', action: 'raise_threshold', suggested_threshold: 31, confidence: 'high', ... },
-//   ...
-// ]
+```bash
+npm run data:seed42
+npm run data:seed7
+npm run backtest:drift
+npm run backtest:fun
 ```
 
-Replace `SAMPLE_ALERTS` with a real dataset from your database or a CSV export from your blockchain analytics platform.
+Outputs are written to `outputs/`:
+- `report-standard.json`
+- `report-standard.csv`
+- `report-standard.md`
+- `report-fun.json` + CSV + MD (stress scenarios)
 
----
+## CLI
 
-## Configuration
-
-`recommend(analysis, options)` accepts:
-
-| Option | Default | Description |
-|---|---|---|
-| `target` | `'standard'` | Conversion rate target: `'critical'` (40%), `'standard'` (20%), `'broad'` (10%) |
-| `max_raise_pct` | `25` | Maximum percentage to raise a zero-conversion rule's threshold |
-
-### Conversion Targets
-
-| Target | Min SAR Rate | Use Case |
-|---|---|---|
-| `critical` | 40% | High-volume, resource-constrained teams needing high precision |
-| `standard` | 20% | Typical VASP compliance programmes |
-| `broad` | 10% | Early-stage programmes prioritising coverage over precision |
-
----
-
-## Input Data Shape
-
-Each alert object requires:
-
-```js
-{
-  rule_id: 'D-IB-1',          // Rule identifier
-  threshold_value: 200_000,   // Current rule threshold
-  score: 82,                  // Risk score assigned to this alert
-  filed_sar: true,            // Whether a SAR was ultimately filed
-  value_usd: 450_000,         // Transaction value in USD
-  days_to_disposition: 2      // Days from alert creation to disposition
-}
+```bash
+node cli.js \
+  --input ./data/alerts-seed-42.json \
+  --target standard \
+  --scenario ./scenarios/sample-scenarios.json \
+  --prior ./data/alerts-seed-7.json \
+  --out ./outputs/report-standard.json
 ```
 
----
+### Options
+
+- `--input` required: JSON array or `{ alerts: [...] }`
+- `--target`: `critical` | `standard` | `broad`
+- `--scenario`: optional scenario config for backtesting
+- `--prior`: optional prior-period dataset for drift diagnostics
+- `--maxRaisePct`: optional max constrained threshold raise (default `25`)
+- `--out`: output report path (`.json`), plus CSV/MD siblings
 
 ## Recommendation Actions
 
-| Action | Meaning |
-|---|---|
-| `raise_threshold` | Safe to raise -- score separation or zero conversion supports it |
-| `review_rule_logic` | Conversion is low but SAR/non-SAR scores overlap -- threshold alone won't fix this |
-| `add_auto_prioritisation` | Conversion meets target but disposition time is high -- prioritisation logic would help |
-| `no_change` | Rule is performing well within target parameters |
+- `raise_threshold`: low conversion + acceptable score separation
+- `review_rule_logic`: low conversion + high score overlap
+- `add_auto_prioritisation`: conversion acceptable but queue speed weak
+- `no_change`: healthy within profile
 
----
+## Scenario Playground
 
-## Related
+Try `scenarios/fun-what-if.json` to compare risk appetite modes:
 
-- [ruleforge](https://github.com/garbis-darie/ruleforge) -- Full KYT compliance template platform this methodology feeds into
-- [sanctions-screen](https://github.com/garbis-darie/sanctions-screen) -- Companion sanctions screening engine
+- **Risk-Off Hard Raise**: maximizes workload reduction, expects lower recall.
+- **Risk Balanced Raise**: moderate reduction and moderate recall tradeoff.
+- **Growth/Coverage Lower**: maximizes detection coverage with analyst workload increase.
 
----
+## Guardrails
 
-## About the Builder
+- Not legal advice.
+- Recommendations are decision support, not automatic approvals.
+- Always validate with post-change monitoring windows in production.
 
-**Garbis Darie** -- Transaction Monitoring Strategy Analyst specialising in Virtual Assets Compliance. Built this as part of an independent KYT risk framework for VASPs, having spent 4+ years calibrating alert thresholds at Celsius Network, ToTheMoon, and DelSaldado Services.
+## Version
 
-[LinkedIn](https://linkedin.com/in/garbis-darie) . [GitHub](https://github.com/garbis-darie) . hello@garbisdarie.com
-
----
-
-## License
-
-MIT
+`v0.2.0 - Explainable Calibration Release`

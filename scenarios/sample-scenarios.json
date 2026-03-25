@@ -1,0 +1,8 @@
+{
+  "scenarios": [
+    { "id": "baseline", "label": "Baseline", "mode": "baseline", "delta": 0 },
+    { "id": "balanced_plus", "label": "Balanced Raise (+3)", "mode": "raise", "delta": 3 },
+    { "id": "precision_plus", "label": "Precision Raise (+8)", "mode": "raise", "delta": 8 },
+    { "id": "coverage_plus", "label": "Coverage Lower (-5)", "mode": "lower", "delta": 5 }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "scenarios": [
+    { "id": "baseline", "label": "Baseline", "mode": "baseline", "delta": 0 },
+    { "id": "risk_off_hard", "label": "Risk-Off Hard Raise (+12)", "mode": "raise", "delta": 12 },
+    { "id": "risk_balanced", "label": "Risk Balanced Raise (+5)", "mode": "raise", "delta": 5 },
+    { "id": "growth_mode", "label": "Growth Mode Lower (-8)", "mode": "lower", "delta": 8 },
+    { "id": "coverage_push", "label": "Coverage Push Lower (-12)", "mode": "lower", "delta": 12 }
+  ]
+}
